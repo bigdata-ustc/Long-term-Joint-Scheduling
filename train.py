@@ -15,8 +15,8 @@ from tqdm import tqdm
 # from utils import get_player
 
 MEMORY_SIZE = 1e6
-MEMORY_WARMUP_SIZE = MEMORY_SIZE // 200
-STATE_SIZE = (260,1)
+MEMORY_WARMUP_SIZE = MEMORY_SIZE // 500
+STATE_SIZE = (176,1)
 CONTEXT_LEN = 4
 FRAME_SKIP = 4
 UPDATE_FREQ = 4
@@ -33,10 +33,12 @@ def run_train_episode(env, agent, rpm):
         steps += 1
         context = rpm.recent_state()
         context.append(state)
+#         print('state: ',state.shape)
+#         print('context: ',[len(i) for i in context])
         context = np.stack(context, axis=0)
         action = agent.sample(context)
-#         print('action:',action)
         next_state, reward, isOver, _ = env.step(action)
+        logger.info('action:{} reward:{}'.format(action,reward))
         rpm.append(Experience(state, action, reward, isOver))
         # start training
         if rpm.size() > MEMORY_WARMUP_SIZE:
@@ -48,10 +50,12 @@ def run_train_episode(env, agent, rpm):
                 cost = agent.learn(batch_state, batch_action, batch_reward,
                                    batch_next_state, batch_isOver)
                 all_cost.append(float(cost))
-        total_reward += reward
+        total_reward = reward
         state = next_state
         if isOver:
+            logger.info('episode end total_reward:{}'.format(total_reward))
             break
+#             
     if all_cost:
         logger.info('[Train]total_reward: {}, mean_cost: {}'.format(
             total_reward, np.mean(all_cost)))
@@ -60,17 +64,20 @@ def run_train_episode(env, agent, rpm):
 
 def main():
     env = Env()
+    station_num = env.station_num
+    max_scheduling_num = env.max_scheduling_num
     rpm = ReplayMemory(MEMORY_SIZE, STATE_SIZE, CONTEXT_LEN)
-    action_dim = 3
-
+    action_dim = station_num
+    action_dims = station_num * 2 + 1
+    print('ad',action_dim)
     hyperparas = {
-        'action_dim': action_dim,
+        'action_dim': action_dims,
         'lr': LEARNING_RATE,
         'gamma': GAMMA
     }
     model = LJST_Model(action_dim)
     algorithm = DQN(model, hyperparas)
-    agent = LJST_Agent(algorithm, action_dim)
+    agent = LJST_Agent(algorithm, action_dims, station_num,max_scheduling_num)
 
     with tqdm(total=MEMORY_WARMUP_SIZE) as pbar:
         while rpm.size() < MEMORY_WARMUP_SIZE:
@@ -89,18 +96,17 @@ def main():
         pbar.set_description('[train]exploration:{}'.format(agent.exploration))
         pbar.update(steps)
 
-
     pbar.close()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--batch_size', type=int, default=32, help='batch size for training')
+        '--batch_size', type=int, default=1, help='batch size for training')
     parser.add_argument(
         '--train_total_steps',
         type=int,
-        default=int(1e4),
+        default=int(2e4),
         help='maximum environmental steps of games')
     args = parser.parse_args()
 
