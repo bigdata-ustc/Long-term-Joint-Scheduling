@@ -297,22 +297,25 @@ class BikeGame(object):
         if num <= 0 or st < 0 or ed < 0:
             return self.do_bike_flow(0)
         elif st == ed:
-            return -1
+            self.time += 1
+            return -1000
         elif self.station_bikes_num[st] >= num:
             # print("st", st, " ed", ed, " num", num)
             self.station_bikes_num[st] -= num
             self.station_bikes_num[ed] += num
             return self.do_bike_flow(-5)
         else:
-            
-            return -1
+            self.time += 1
+            return -999
         
 class Env(object):
-    def __init__(self,station_num = 10,
+    def __init__(self,station_num = 8,
                  all_bikes_num = None,
                  day_mean = 500,
                  max_scheduling_num = 10):
         self.bikeGame = BikeGame(station_num, all_bikes_num, day_mean, max_scheduling_num)
+        self.station_num = station_num
+        self.max_scheduling_num = max_scheduling_num
         
     def reset(self):
         self.bikeGame.new_game()
@@ -322,9 +325,9 @@ class Env(object):
     def step(self,action):
         isOver = False
         info = None
-        st = action[0]
-        ed = action[1]
-        num = action[2]
+        st = np.argmax(action[0:8])
+        ed = np.argmax(action[8:16])
+        num = int(action[16]) * 10
         reward = self.bikeGame.do_action(st,ed,num)
         state = self.bikeGame.get_game_state()
         if self.bikeGame.time >= 24:
