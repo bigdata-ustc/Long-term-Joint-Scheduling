@@ -1,8 +1,11 @@
 # Long-term-Joint-Scheduling
-Long-term Joint Scheduling for Urban Traffic
+Long-term Joint Scheduling for Urban Traffic.
+Here we use implement a simple demo by PaddlePaddle, using reinforcement learning to schedule bike-sharing.
+
 
 ## KDD CUP VIDEO
 This is the [link](https://youtu.be/t5M2wVPhTyk) to video
+
 
 ## 模拟数据生成文档
 ### 假设
