@@ -11,8 +11,8 @@ class ReplayMemory(object):
         self.state_shape = state_shape
         self.context_len = int(context_len)
 
-        self.state = np.zeros((self.max_size, ) + state_shape, dtype='int32')
-        self.action = np.zeros((self.max_size, ) + (3,), dtype='int32')
+        self.state = np.zeros((self.max_size, ) + state_shape, dtype='float32')
+        self.action = np.zeros((self.max_size, ) + (17,), dtype='int32')
         self.reward = np.zeros((self.max_size, ), dtype='float32')
         self.isOver = np.zeros((self.max_size, ), dtype='bool')
 
@@ -37,7 +37,7 @@ class ReplayMemory(object):
     def recent_state(self):
         """ maintain recent state for training"""
         lst = list(self._context)
-        states = [np.zeros(self.state_shape, dtype='int32')] * \
+        states = [np.zeros(self.state_shape, dtype='float32')] * \
                     (self._context.maxlen - len(lst))
         states.extend([k.state for k in lst])
         return states
@@ -93,7 +93,7 @@ class ReplayMemory(object):
         return self._process_batch(batch_exp)
 
     def _process_batch(self, batch_exp):
-        state = np.asarray([e[0] for e in batch_exp], dtype='int32')
+        state = np.asarray([e[0] for e in batch_exp], dtype='float32')
         reward = np.asarray([e[1] for e in batch_exp], dtype='float32')
         action = np.asarray([e[2] for e in batch_exp], dtype='int32')
         isOver = np.asarray([e[3] for e in batch_exp], dtype='bool')
