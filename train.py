@@ -15,13 +15,13 @@ from tqdm import tqdm
 # from utils import get_player
 
 MEMORY_SIZE = 1e6
-MEMORY_WARMUP_SIZE = MEMORY_SIZE // 500
-STATE_SIZE = (176,1)
+MEMORY_WARMUP_SIZE = MEMORY_SIZE // 50
+STATE_SIZE = (16,11)
 CONTEXT_LEN = 4
 FRAME_SKIP = 4
 UPDATE_FREQ = 4
 GAMMA = 0.99
-LEARNING_RATE = 1e-3 * 0.5
+LEARNING_RATE = 1e-4 * 0.5
 
 
 def run_train_episode(env, agent, rpm):
@@ -33,8 +33,6 @@ def run_train_episode(env, agent, rpm):
         steps += 1
         context = rpm.recent_state()
         context.append(state)
-#         print('state: ',state.shape)
-#         print('context: ',[len(i) for i in context])
         context = np.stack(context, axis=0)
         action = agent.sample(context)
         next_state, reward, isOver, _ = env.step(action)
@@ -67,17 +65,17 @@ def main():
     station_num = env.station_num
     max_scheduling_num = env.max_scheduling_num
     rpm = ReplayMemory(MEMORY_SIZE, STATE_SIZE, CONTEXT_LEN)
+#     action_num = 3
     action_dim = station_num
-    action_dims = station_num * 2 + 1
-    print('ad',action_dim)
+    act_dims = station_num * 2 + 1
     hyperparas = {
-        'action_dim': action_dims,
+        'action_dim': act_dims,
         'lr': LEARNING_RATE,
         'gamma': GAMMA
     }
     model = LJST_Model(action_dim)
     algorithm = DQN(model, hyperparas)
-    agent = LJST_Agent(algorithm, action_dims, station_num,max_scheduling_num)
+    agent = LJST_Agent(algorithm, act_dims, station_num, max_scheduling_num)
 
     with tqdm(total=MEMORY_WARMUP_SIZE) as pbar:
         while rpm.size() < MEMORY_WARMUP_SIZE:
@@ -96,17 +94,18 @@ def main():
         pbar.set_description('[train]exploration:{}'.format(agent.exploration))
         pbar.update(steps)
 
+
     pbar.close()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--batch_size', type=int, default=1, help='batch size for training')
+        '--batch_size', type=int, default=32, help='batch size for training')
     parser.add_argument(
         '--train_total_steps',
         type=int,
-        default=int(2e4),
+        default=int(1e6),
         help='maximum environmental steps of games')
     args = parser.parse_args()
 
