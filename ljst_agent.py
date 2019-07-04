@@ -3,7 +3,7 @@ import paddle.fluid as fluid
 import parl.layers as layers
 from parl.framework.agent_base import Agent
 
-STATE_SIZE = (176,1)
+STATE_SIZE = (16,11)
 CONTEXT_LEN = 4
 
 
@@ -36,7 +36,6 @@ class LJST_Agent(Agent):
                 shape=[CONTEXT_LEN, STATE_SIZE[0], STATE_SIZE[1]],
                 dtype='float32')
             action = layers.data(name='act', shape=[-1,17])
-#             action1 = layers.data(name='act1', shape=[8])
             reward = layers.data(name='reward', shape=[], dtype='float32')
             next_obs = layers.data(
                 name='next_obs',
@@ -48,7 +47,8 @@ class LJST_Agent(Agent):
     def sample(self, obs):
         sample = np.random.random()
         if sample < self.exploration:
-            ed = st = np.zeros(self.station_num)
+            st = np.zeros(self.station_num)
+            ed = np.zeros(self.station_num)
             st[np.random.randint(0,self.station_num)] = 1  
             ed[np.random.randint(0,self.station_num)] = 1
             num = np.random.randint(0,self.max_scheduling_num)
@@ -70,25 +70,17 @@ class LJST_Agent(Agent):
                     feed={'obs': obs.astype('float32')},
                     fetch_list=[self.value])[0]
                 pred_Q = np.squeeze(pred_Q, axis=0)
-                print('predQ',pred_Q.shape)
-    #                 act = np.argmax(pred_Q)
                 st[np.argmax(pred_Q[0:8])] = 1
                 ed[np.argmax(pred_Q[8:16])] = 1
                 num = int(pred_Q[16]) * 10
-                print('agent_num',num)
                 act = np.concatenate([st,ed,[num]])
-                print('agent_act',act)
-        self.exploration = max(0.1, self.exploration - 1e-5)
+        self.exploration = max(0.1, self.exploration - 1e-6)
         return act
 
 
     def learn(self, obs, act, reward, next_obs, terminal):
-#         if self.global_step % self.update_target_steps == 0:
-#             self.alg.sync_target(self.gpu_id)
         self.global_step += 1
 
-#         act = np.expand_dims(act, -1)
-#         reward = np.clip(reward, -1, 1)
         feed = {
             'obs': obs.astype('float32'),
             'act': act.astype('int32'),
