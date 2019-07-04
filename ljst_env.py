@@ -78,7 +78,8 @@ class BikeFlowFac(object):
         return station_docks_num
         
     def get_day_flow(self):
-        return self.bike_day_kde.resample(1)
+#         return self.bike_day_kde.resample(1)
+        return max(self.bike_day_kde.resample(1), 100)
     
     def get_hour_flow(self):
         # 根据百度地图查询记录，生成一个新的一天不同时刻的单车使用变化情况
@@ -168,14 +169,6 @@ class BikeGame(object):
         self.station_num = station_num
         self.fac = BikeFlowFac(station_num, bikes_num, day_mean)
         self.max_scheduling_num = max_scheduling_num
-#         self.award = 0
-#         self.docks_loss = 0
-#         self.time = 7
-#         self.bike_flow = self.fac.get_bike_flow()
-#         self.station_bikes_num = self.fac.gen_station_bikes_num()
-#         self.station_docks_num = self.fac.gen_station_docks_num()
-#         self._init_station_bikes_num = self.station_bikes_num.copy()
-#         self._init_station_docks_num = self.station_docks_num.copy() 
         self.new_game()
     
     def get_graph_flow(self, t=None):
@@ -283,6 +276,7 @@ class BikeGame(object):
                 self.station_docks_num, nxt_biking_demand, nxt_return_demand])
         game_state =  expand_dims(game_state,axis=0)
         return game_state.reshape(16,11)
+    
     def do_action(self, st, ed, num):
         # 和环境交互接口，表示调度小车，每个时刻默认调度一次， 合法操作返回0
         # 调度小车之后， 这里模拟执行这一时刻的单车流动，并进行到下一时刻
@@ -291,30 +285,24 @@ class BikeGame(object):
         # 2. num <= 0, st<0或者ed<0的时候 -> 当前调度车不执行操作
         # 3. 规定st != ed
         # 4. 当前调度的车数目必须小于等于该车站的单车数目
-        num = int(min(num, self.max_scheduling_num))
+        num = int(max(min(num, self.max_scheduling_num), 0))
         if self.time >= 24:
             return self.award
-        if num <= 0 or st < 0 or ed < 0:
+        if num <= 0 or st < 0 or ed < 0 or (st == ed):
             return self.do_bike_flow(0)
-        elif st == ed:
-            self.time += 1
-            self.award -= 1000
-            return self.award
         elif self.station_bikes_num[st] >= num:
-            # print("st", st, " ed", ed, " num", num)
+        # print("st", st, " ed", ed, " num", num)
             self.station_bikes_num[st] -= num
             self.station_bikes_num[ed] += num
             return self.do_bike_flow(-5)
         else:
-            self.time += 1
-            self.award -= 1000
-            return self.award
+            return self.do_bike_flow(0)
         
 class Env(object):
     def __init__(self,station_num = 8,
                  all_bikes_num = None,
                  day_mean = 500,
-                 max_scheduling_num = 10):
+                 max_scheduling_num = 20):
         self.bikeGame = BikeGame(station_num, all_bikes_num, day_mean, max_scheduling_num)
         self.station_num = station_num
         self.max_scheduling_num = max_scheduling_num
