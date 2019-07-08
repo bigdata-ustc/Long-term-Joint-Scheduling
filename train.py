@@ -24,7 +24,7 @@ GAMMA = 0.99
 LEARNING_RATE = 1e-4 * 0.5
 
 
-def run_train_episode(env, agent, rpm):
+def run_train_episode(env, agent, rpm, step =None, step_num=None):
     total_reward = 0
     all_cost = []
     state = env.reset()
@@ -36,7 +36,9 @@ def run_train_episode(env, agent, rpm):
         context = np.stack(context, axis=0)
         action = agent.sample(context)
         next_state, reward, isOver, _ = env.step(action)
-        logger.info('action:{} reward:{}'.format(action,reward))
+        if (not step is None) and (step > (step_num - 510)):
+            all_demand = env.bikeGame.get_day_demand()
+            logger.info('state {} action:{} all_demand: {} reward:{} '.format(state,action,all_demand,reward))
         rpm.append(Experience(state, action, reward, isOver))
         # start training
         if rpm.size() > MEMORY_WARMUP_SIZE:
@@ -50,8 +52,9 @@ def run_train_episode(env, agent, rpm):
                 all_cost.append(float(cost))
         total_reward = reward
         state = next_state
+        
         if isOver:
-            logger.info('episode end total_reward:{}'.format(total_reward))
+            logger.info('##############episode end total_reward:{}##############'.format(total_reward))
             break
 #             
     if all_cost:
@@ -89,7 +92,7 @@ def main():
     max_reward = None
     while total_steps < args.train_total_steps:
         # start epoch
-        total_reward, steps = run_train_episode(env, agent, rpm)
+        total_reward, steps = run_train_episode(env, agent, rpm, total_steps, args.train_total_steps)
         total_steps += steps
         pbar.set_description('[train]exploration:{}'.format(agent.exploration))
         pbar.update(steps)
@@ -105,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--train_total_steps',
         type=int,
-        default=int(1e6),
+        default=int(5e5),
         help='maximum environmental steps of games')
     args = parser.parse_args()
 
