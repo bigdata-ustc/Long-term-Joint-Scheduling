@@ -48,7 +48,7 @@ def get_integer_array(float_array):
     return a.reshape(float_array.shape).astype(int)
 
 class BikeFlowFac(object):
-    def __init__(self, station_num=10, bikes_num = None, day_mean=None):
+    def __init__(self, station_num=10, bikes_num = None, day_mean=500):
         # 单车数据生成工厂
         # 1. station_num指定生成的单车站点数目
         # 2. bikes_num 指定生成单车数目
@@ -64,6 +64,7 @@ class BikeFlowFac(object):
 #         bike_hour_flow = bike_hour_flow/sum(bike_hour_flow)
         self.bike_day_kde = stats.gaussian_kde(bike_day_flow)
         self.bike_hour_kde = stats.gaussian_kde(bike_hour_flow)
+        self.day_demand = 0
         
         
     def gen_station_bikes_num(self):
@@ -79,7 +80,7 @@ class BikeFlowFac(object):
         
     def get_day_flow(self):
 #         return self.bike_day_kde.resample(1)
-        return max(self.bike_day_kde.resample(1), 100)
+        return max(self.bike_day_kde.resample(1), 0.2)
     
     def get_hour_flow(self):
         # 根据百度地图查询记录，生成一个新的一天不同时刻的单车使用变化情况
@@ -133,9 +134,11 @@ class BikeFlowFac(object):
         # 3. 有了每小时的总的单车使用次数， 然后随机分配到每个车站，[7, 11, 15, 19, 23]这些时刻是随机生成，其他时刻是插值法
         #
         bike_flow = BikeFlow(self.station_num)
-        all_bike_demand = random.randint(500,1000) if self.day_mean is None else self.day_mean
-        day_demand = int(self.get_day_flow()*all_bike_demand)
-        hour_demand = get_integer_array(self.get_hour_flow()*day_demand)
+#         all_bike_demand = random.randint(500,1000) if self.day_mean is None else self.day_mean
+#         day_demand = min(int(self.get_day_flow()*all_bike_demand), 1000)
+        all_bike_demand = self.day_mean
+        self.day_demand = min(max(int(self.get_day_flow()*all_bike_demand), 200),1000)
+        hour_demand = get_integer_array(self.get_hour_flow()*self.day_demand)
         gen_hour_list = [7, 11, 15, 19, 23, 24]
         # gen_hour_list = [7, 11,12]
         gen_biking_p = [self.get_p() for i in gen_hour_list]
@@ -158,7 +161,7 @@ class BikeFlowFac(object):
         return bike_flow
 
 class BikeGame(object):
-    def __init__(self, station_num=8, bikes_num=None, day_mean= None, max_scheduling_num=10):
+    def __init__(self, station_num=8, bikes_num=None, day_mean= 500, max_scheduling_num=10):
         # 复杂模拟环境, 提供和环境交互的接口
         # 一天默认时间是7~23点
         #
@@ -182,6 +185,9 @@ class BikeGame(object):
         if t >= 24:
             return zeros((self.station_num, self.station_num))
         return self.bike_flow.get_graph_flow(t).copy()
+
+    def get_day_demand(self):
+        return self.fac.day_demand
         
     def get_return_demand(self, t = None):
         # t is None默认获取当前时段的单车归还需求
