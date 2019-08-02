@@ -262,7 +262,7 @@ class BikeGame(object):
         self.station_bikes_num += bikes_return
         idx = self.station_bikes_num>self.station_docks_num
         docks_loss = sum(self.station_bikes_num[idx]-self.station_docks_num[idx])
-        self.award -= docks_loss*0.25
+        #self.award -= docks_loss*0.25
         self.docks_loss += docks_loss*0.25
         self.time += 1
         return self.award
@@ -308,7 +308,7 @@ class Env(object):
     def __init__(self,station_num = 8,
                  all_bikes_num = None,
                  day_mean = 500,
-                 max_scheduling_num = 20):
+                 max_scheduling_num = 10):
         self.bikeGame = BikeGame(station_num, all_bikes_num, day_mean, max_scheduling_num)
         self.station_num = station_num
         self.max_scheduling_num = max_scheduling_num
